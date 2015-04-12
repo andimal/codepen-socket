@@ -14,28 +14,44 @@
     </style>
   </head>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+  <script src="//code.jquery.com/jquery-1.11.1.js"></script>
   <script>
-    var socket = io();
-    $(document).on('mousemove', function(e) {
-      socketMessage = {
-        type  : "smoke",
-        mouse : {x: e.pageX, y: e.pageY}
-      }
-      // console.log(socketMessage)
-      socket.emit('object', socketMessage);
+    var host    = location.origin.replace(/^http/, 'ws')
+    // var host    = "ws://boiling-fortress-8206.herokuapp.com"
+    var ws      = new WebSocket(host);
+    var array   = new Uint32Array(1);
+    var userID  = window.crypto.getRandomValues(array)[0];
+    
+    // receive msg from server
+    ws.onmessage = function (msg) {
+      var parsedMsg = JSON.parse(msg.data);
+      if(parsedMsg.counter) {
 
-      socket.on('object', function(msg){
-        $('#messages').append($('<li>').text("type: " + msg.type + ", mouse x: " + msg.mouse.x + ", mouse y: " + msg.mouse.y));
-      });
-    })
+      } else {
+        $('#messages').append($('<li>').text("user id: " + parsedMsg.id + ", color: " + parsedMsg.color + ", mouse x: " + parsedMsg.mouse.x + ", mouse y: " + parsedMsg.mouse.y));
+      }
+    };
+
+    ws.onopen = function() {
+      // send to server
+      $(document).on('mousemove', function(e) {
+        socketMessage = {
+          id      : userID,
+          color   : "white",
+          mouse   : {x: e.pageX, y: e.pageY}
+        }
+        ws.send( JSON.stringify(socketMessage) );
+      })
+    };
   </script>
 
   <body>
     <ul id="messages"></ul>
-    <form action="">
-      <input id="m" autocomplete="off" /><button>Send</button>
-    </form>
   </body>
+
+  <!-- <body>
+    <h1>Pings</h1>
+    <ul id='pings'></ul>
+  </body> -->
+
 </html>

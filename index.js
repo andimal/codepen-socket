@@ -1,25 +1,38 @@
-var app = require('express')();
-var http = require('http').Server(app);
-var io = require('socket.io')(http);
+var WebSocketServer = require("ws").Server
+var http = require("http")
+var express = require("express")
+var app = express()
+var port = process.env.PORT || 5000
+var counter = 0
 
-app.get('/', function(req, res){
-  res.sendfile('index.html');
-});
+app.use(express.static(__dirname + "/"))
 
-io.on('connection', function(socket){
-  console.log('a user connected');
-  socket.on('disconnect', function(){
-    console.log('user disconnected');
-  });
-});
+var server = http.createServer(app)
+server.listen(port)
 
-io.on('connection', function(socket){
-  socket.on('object', function(msg){
-    console.log('object: ' + msg);
-    io.emit('object', msg);
-  });
-});
+console.log("http server listening on %d", port)
 
-http.listen(3000, function(){
-  console.log('listening on *:3000');
-});
+var wss = new WebSocketServer({server: server})
+console.log("websocket server created")
+
+wss.broadcast = function(data) {
+  for (var i in this.clients)
+    this.clients[i].send(data);
+};
+
+wss.on("connection", function(ws) {
+  console.log("websocket connection open")
+  counter++
+  console.log(counter)
+  wss.broadcast( JSON.stringify({counter: counter}) )
+
+  ws.on('message', function(data, flags) {
+    wss.broadcast(data);
+  })
+
+  ws.on("close", function() {
+    console.log("websocket connection closed")
+    counter --
+    wss.broadcast( JSON.stringify({counter: counter}) )
+  })
+})
